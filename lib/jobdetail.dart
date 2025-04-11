@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../global.dart'; // Adjust if your global.dart is in a different folder
 import 'models/job.dart';
 
 class JobDetailsPage extends StatelessWidget {
@@ -11,7 +13,10 @@ class JobDetailsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(job.title, style: GoogleFonts.permanentMarker(color: Colors.white)),
+        title: Text(
+          job.description,
+          style: GoogleFonts.permanentMarker(color: Colors.white),
+        ),
         backgroundColor: const Color(0xff2D93A5),
       ),
       backgroundColor: const Color(0xffF8FAFC),
@@ -22,9 +27,14 @@ class JobDetailsPage extends StatelessWidget {
           children: [
             buildDetailTile("Client", job.client),
             buildDetailTile("Date & Time", job.dateTime),
-            buildDetailTile("Location", job.location),
             const SizedBox(height: 10),
-            Text("Description:", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              "Description:",
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(job.description, style: GoogleFonts.poppins(fontSize: 16)),
             const SizedBox(height: 30),
@@ -34,22 +44,74 @@ class JobDetailsPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Job Accepted")),
-                    );
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    try {
+                      final querySnapshot =
+                          await FirebaseFirestore.instance
+                              .collection('workrequests')
+                              .where('requestedTo', isEqualTo: loggedInUserId)
+                              .where('jobdes', isEqualTo: job.description)
+                              .get();
+
+                      if (querySnapshot.docs.isNotEmpty) {
+                        final docId = querySnapshot.docs.first.id;
+                        await FirebaseFirestore.instance
+                            .collection('workrequests')
+                            .doc(docId)
+                            .update({'status': 'accepted'});
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Job Accepted")),
+                        );
+                        Navigator.pop(context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Job not found.")),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error: ${e.toString()}")),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.check_circle),
                   label: const Text("Accept"),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Job Declined")),
-                    );
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    try {
+                      final querySnapshot =
+                          await FirebaseFirestore.instance
+                              .collection('workrequests')
+                              .where('requestedTo', isEqualTo: loggedInUserId)
+                              .where('jobdes', isEqualTo: job.description)
+                              .get();
+
+                      if (querySnapshot.docs.isNotEmpty) {
+                        final docId = querySnapshot.docs.first.id;
+                        await FirebaseFirestore.instance
+                            .collection('workrequests')
+                            .doc(docId)
+                            .update({'status': 'rejected'});
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Job Declined")),
+                        );
+                        Navigator.pop(context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Job not found.")),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Error: ${e.toString()}")),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.cancel),
                   label: const Text("Decline"),
@@ -70,7 +132,10 @@ class JobDetailsPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("$title: ", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          Text(
+            "$title: ",
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
           Expanded(child: Text(value, style: GoogleFonts.poppins())),
         ],
       ),

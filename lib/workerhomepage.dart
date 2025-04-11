@@ -6,6 +6,8 @@ import 'models/job.dart';
 import 'earnings.dart';
 import 'myjobspage.dart';
 import 'chat.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'global.dart';
 
 class WorkerHomePage extends StatefulWidget {
   const WorkerHomePage({super.key});
@@ -16,30 +18,44 @@ class WorkerHomePage extends StatefulWidget {
 
 class _WorkerHomePageState extends State<WorkerHomePage> {
   bool isAvailable = true;
+  List<Job> jobRequests = [];
 
-  final List<Job> jobRequests = [
-    Job(
-      client: "Arun Kumar",
-      title: "Electrical wiring fix",
-      description: "Fix faulty wiring in living room and kitchen.",
-      dateTime: "April 5, 2025 - 2:30 PM",
-      location: "No. 12, Anna Nagar, Chennai",
-    ),
-    Job(
-      client: "Priya S",
-      title: "Tap leakage repair",
-      description: "Repair leaky kitchen tap and check pressure.",
-      dateTime: "April 6, 2025 - 11:00 AM",
-      location: "45, Velachery Main Rd, Chennai",
-    ),
-    Job(
-      client: "Rahul D",
-      title: "Fan installation",
-      description: "Install ceiling fan in study room.",
-      dateTime: "April 2, 2025 - 4:00 PM",
-      location: "23, Adyar, Chennai",
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchJobRequests();
+  }
+
+  Future<void> fetchJobRequests() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('workrequests')
+              .where('requestedTo', isEqualTo: loggedInUserId)
+              .get();
+
+      final List<Job> fetchedJobs =
+          snapshot.docs.map((doc) {
+            final timestamp = doc['timestamp'] as Timestamp?;
+            final dateTimeString =
+                timestamp != null
+                    ? timestamp.toDate().toString()
+                    : 'No date/time provided';
+
+            return Job(
+              client: doc['clientName'] ?? 'Unknown',
+              description: doc['jobdes'] ?? 'No description',
+              dateTime: dateTimeString,
+            );
+          }).toList();
+
+      setState(() {
+        jobRequests = fetchedJobs;
+      });
+    } catch (e) {
+      print('Error fetching jobs: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,8 +100,11 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
-                          context,
-                         MaterialPageRoute(builder: (context) => const WorkerProfilePage()));
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WorkerProfilePage(),
+                        ),
+                      );
                     },
                   ),
                   ListTile(
@@ -95,21 +114,27 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const MyJobsPage()));
+                        MaterialPageRoute(
+                          builder: (context) => const MyJobsPage(),
+                        ),
+                      );
                     },
                   ),
                   ListTile(
-                    leading: Icon(Icons.attach_money),
-                    title: Text('Earnings'),
+                    leading: const Icon(Icons.attach_money),
+                    title: const Text('Earnings'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const EarningsPage()));},
+                        MaterialPageRoute(
+                          builder: (context) => const EarningsPage(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
-
             ),
             const Divider(),
             ListTile(
@@ -149,7 +174,10 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                   children: [
                     Text(
                       'Availability:',
-                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     Row(
                       children: [
@@ -181,7 +209,10 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
               const SizedBox(height: 25),
               Text(
                 'Incoming Job Requests',
-                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 10),
 
@@ -204,25 +235,45 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Client: ${job.client}", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text("Job: ${job.title}", style: GoogleFonts.poppins(color: Colors.grey.shade600)),
-                        ],
+                      Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              "Client: ${job.client}",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Job Description: ${job.description}",
+                              style: GoogleFonts.poppins(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => JobDetailsPage(job: job)),
+                            MaterialPageRoute(
+                              builder: (_) => JobDetailsPage(job: job),
+                            ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xff2D93A5),
                         ),
-                        child: Text("View", style: GoogleFonts.poppins(color: Colors.white)),
+                        child: Text(
+                          "View",
+                          style: GoogleFonts.poppins(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -237,8 +288,9 @@ class _WorkerHomePageState extends State<WorkerHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const chat()));
+            context,
+            MaterialPageRoute(builder: (context) => const chat()),
+          );
         },
         backgroundColor: const Color(0xff2D93A5),
         child: const Icon(Icons.chat),

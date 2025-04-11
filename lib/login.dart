@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'signup.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'global.dart';
 
 class Log extends StatefulWidget {
   const Log({super.key});
@@ -30,6 +31,7 @@ Future<void> _loginUser() async {
 
     // Get the user ID
     final uid = userCredential.user?.uid;
+    loggedInUserId = uid;
     print(uid);
 
     // Fetch the role from Firestore
